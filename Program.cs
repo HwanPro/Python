@@ -39,29 +39,53 @@ try
     // Si también lo corres en consola, no pasa nada.
     builder.Host.UseWindowsService();
 
-    // Kestrel: configuración para producción
+    // Kestrel: configuración para desarrollo y producción
     builder.WebHost.ConfigureKestrel(k =>
     {
         k.Limits.MaxRequestBodySize = 5 * 1024 * 1024; // 5MB por si envías imágenes
-        // Escuchar en todas las interfaces para acceso de red
-        k.ListenAnyIP(8002);
+        
+        // Configuración según el entorno
+        var isDevelopment = builder.Environment.IsDevelopment();
+        if (isDevelopment)
+        {
+            // Desarrollo: solo localhost
+            k.ListenLocalhost(8002);
+        }
+        else
+        {
+            // Producción: todas las interfaces
+            k.ListenAnyIP(8002);
+        }
     });
 
-    // CORS para producción - permitir dominios de Wolf Gym
+    // CORS: configuración para desarrollo y producción
     builder.Services.AddCors(options =>
     {
         options.AddDefaultPolicy(policy =>
         {
-            policy.WithOrigins(
-                    "http://localhost:3000", 
-                    "http://127.0.0.1:3000",
-                    "https://wolf-gym.com",
-                    "https://www.wolf-gym.com",
-                    "http://wolf-gym.com",
-                    "http://www.wolf-gym.com"
-                  )
-                  .AllowAnyMethod()
-                  .AllowAnyHeader();
+            var isDevelopment = builder.Environment.IsDevelopment();
+            if (isDevelopment)
+            {
+                // Desarrollo: solo localhost
+                policy.WithOrigins(
+                        "http://localhost:3000", 
+                        "http://127.0.0.1:3000"
+                      )
+                      .AllowAnyMethod()
+                      .AllowAnyHeader();
+            }
+            else
+            {
+                // Producción: dominios de Wolf Gym
+                policy.WithOrigins(
+                        "https://wolf-gym.com",
+                        "https://www.wolf-gym.com",
+                        "http://wolf-gym.com",
+                        "http://www.wolf-gym.com"
+                      )
+                      .AllowAnyMethod()
+                      .AllowAnyHeader();
+            }
         });
     });
 
